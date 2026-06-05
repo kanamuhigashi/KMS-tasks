@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="コミュニティTasks">
+<title>学生コミュニティ タスク管理</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#F9F9F7;--surface:#FFFFFF;--surface2:#F3F2EF;
+  --text:#1A1A1A;--text2:#6B6B6B;--text3:#ADADAD;
+  --border:#E8E8E4;--border2:#D0D0C8;
+  --gold:#C19B40;--gold-light:#FDF5E0;
+  --blue:#378ADD;--blue-light:#E6F1FB;
+  --green:#639922;--green-light:#EAF3DE;
+  --red:#E24B4A;--red-light:#FCEBEB;
+  --amber:#BA7517;--amber-light:#FAEEDA;
+  --radius:10px;--radius-lg:14px;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+
+/* APP SHELL */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:10}
+.topbar-title{font-size:17px;font-weight:600;color:var(--text)}
+.topbar-sub{font-size:12px;color:var(--text2);margin-top:1px}
+.topbar-actions{display:flex;gap:8px}
+.icon-btn{width:36px;height:36px;border:none;background:var(--surface2);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--text2)}
+.icon-btn.gold{background:var(--gold);color:#fff}
+
+/* SCROLL AREA */
+.scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 80px}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.stat{background:var(--surface);border-radius:var(--radius);padding:10px 8px;text-align:center;border:1px solid var(--border)}
+.stat-val{font-size:22px;font-weight:700;color:var(--text);line-height:1}
+.stat-val.red{color:var(--red)}
+.stat-label{font-size:11px;color:var(--text2);margin-top:3px}
+
+/* VIEW TABS */
+.view-tabs{display:flex;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:14px}
+.view-tab{flex:1;padding:7px;font-size:13px;font-weight:500;border:none;background:transparent;cursor:pointer;border-radius:8px;color:var(--text2);transition:all .15s}
+.view-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+
+/* FILTER BAR */
+.filter-bar{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-chip{flex-shrink:0;padding:6px 12px;font-size:13px;border:1px solid var(--border);background:var(--surface);border-radius:20px;cursor:pointer;color:var(--text2);transition:all .15s}
+.filter-chip.active{background:var(--text);color:#fff;border-color:var(--text)}
+.search-wrap{margin-bottom:12px;position:relative}
+.search-wrap input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;color:var(--text);outline:none}
+.search-wrap input:focus{border-color:var(--border2)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text3)}
+
+/* TASK CARDS */
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.task-card:active{border-color:var(--border2);background:var(--surface2)}
+.task-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.task-card-title{font-size:15px;font-weight:600;color:var(--text);line-height:1.4;flex:1}
+.task-card-title.done{text-decoration:line-through;color:var(--text3)}
+.task-card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.task-card-memo{font-size:13px;color:var(--text2);margin-top:6px;line-height:1.5}
+.badge{display:inline-flex;align-items:center;font-size:12px;font-weight:500;padding:3px 8px;border-radius:20px}
+.badge-high{background:var(--red-light);color:#A32D2D}
+.badge-mid{background:var(--amber-light);color:var(--amber)}
+.badge-low{background:var(--green-light);color:#3B6D11}
+.badge-assignee{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.badge-due{background:transparent;color:var(--text3);font-size:12px;gap:3px}
+.badge-due.overdue{color:var(--red)}
+.status-pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:3px 8px;border-radius:20px}
+.status-todo{background:var(--surface2);color:var(--text2)}
+.status-doing{background:var(--blue-light);color:#185FA5}
+.status-done{background:var(--green-light);color:#3B6D11}
+
+/* KANBAN */
+.kanban-wrap{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px}
+.kanban-wrap::-webkit-scrollbar{display:none}
+.kanban-col{flex-shrink:0;width:280px;background:var(--surface2);border-radius:var(--radius-lg);padding:12px}
+.kanban-col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.kanban-col-title{font-size:14px;font-weight:600;color:var(--text2)}
+.kanban-count{font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:1px 8px;color:var(--text2)}
+.empty-col{text-align:center;padding:24px 16px;color:var(--text3);font-size:13px}
+
+/* FAB */
+.fab{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));right:16px;width:52px;height:52px;background:var(--text);border:none;border-radius:16px;color:#fff;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.2);z-index:20}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;padding:8px 0;padding-bottom:calc(8px + env(safe-area-inset-bottom));z-index:20}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 0;border:none;background:transparent}
+.nav-icon{font-size:20px;color:var(--text3)}
+.nav-label{font-size:10px;color:var(--text3);font-weight:500}
+.nav-item.active .nav-icon,.nav-item.active .nav-label{color:var(--text)}
+
+/* MODAL / SHEET */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:50;display:flex;flex-direction:column;justify-content:flex-end}
+.sheet{background:var(--surface);border-radius:20px 20px 0 0;padding:16px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+.sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+.sheet-title{font-size:17px;font-weight:600;margin-bottom:16px;color:var(--text)}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.5px}
+.form-input{width:100%;padding:11px 12px;font-size:15px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;appearance:none}
+.form-input:focus{border-color:var(--border2);background:var(--surface)}
+textarea.form-input{min-height:80px;resize:none}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-row{display:flex;gap:8px;margin-top:16px}
+.btn{flex:1;padding:13px;font-size:15px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;transition:opacity .15s}
+.btn:active{opacity:.8}
+.btn-cancel{background:var(--surface2);color:var(--text2)}
+.btn-save{background:var(--text);color:#fff}
+.btn-delete{background:var(--red-light);color:var(--red);flex:0 0 auto;padding:13px 16px}
+.btn-ai{width:100%;padding:13px;font-size:15px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;background:var(--gold);color:#fff;margin-bottom:10px}
+
+/* AI PANEL */
+.ai-results{margin-top:12px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.ai-result-item{padding:12px;border-bottom:1px solid var(--border)}
+.ai-result-item:last-child{border-bottom:none}
+.ai-result-title-input{width:100%;border:none;background:transparent;font-size:15px;font-weight:600;color:var(--text);outline:none;margin-bottom:6px}
+.ai-result-selects{display:flex;gap:6px;flex-wrap:wrap}
+.mini-select{padding:4px 8px;font-size:12px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--text);outline:none;-webkit-appearance:none}
+.loading-wrap{text-align:center;padding:24px;color:var(--text2);font-size:14px}
+.loading-dots{display:inline-flex;gap:4px;vertical-align:middle;margin-left:6px}
+.loading-dots span{width:5px;height:5px;border-radius:50%;background:var(--text2);animation:ld .9s ease-in-out infinite}
+.loading-dots span:nth-child(2){animation-delay:.2s}
+.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes ld{0%,80%,100%{transform:scale(.5)}40%{transform:scale(1)}}
+.section-header{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;margin-top:4px}
+.empty-state{text-align:center;padding:48px 16px;color:var(--text3)}
+.empty-state-icon{font-size:40px;margin-bottom:10px}
+.empty-state-text{font-size:14px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">コミュニティ Tasks</div>
+      <div class="topbar-sub">建設みらい総研プロデュース</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn gold" onclick="openAiSheet()" title="AIで一括追加">✦</button>
+    </div>
+  </div>
+
+  <div class="scroll-area" id="scroll-area">
+    <div class="stats" id="stats-area"></div>
+    <div class="view-tabs">
+      <button class="view-tab active" id="tab-dash" onclick="setView('dash')">概要</button>
+      <button class="view-tab" id="tab-kanban" onclick="setView('kanban')">カンバン</button>
+      <button class="view-tab" id="tab-list" onclick="setView('list')">リスト</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input id="search" placeholder="タスクを検索..." oninput="render()" autocomplete="off">
+    </div>
+    <div class="filter-bar" id="filter-bar"></div>
+    <div id="main-content"></div>
+  </div>
+</div>
+
+<button class="fab" onclick="openTaskSheet()" title="タスクを追加">＋</button>
+
+<div class="bottom-nav">
+  <button class="nav-item active" id="nav-dash" onclick="setView('dash')">
+    <span class="nav-icon">⊞</span>
+    <span class="nav-label">概要</span>
+  </button>
+  <button class="nav-item" id="nav-kanban" onclick="setView('kanban')">
+    <span class="nav-icon">⊟</span>
+    <span class="nav-label">カンバン</span>
+  </button>
+  <button class="nav-item" id="nav-list" onclick="setView('list')">
+    <span class="nav-icon">≡</span>
+    <span class="nav-label">リスト</span>
+  </button>
+</div>
+
+<div id="sheet-container"></div>
+
+<script>
+const STORAGE='community_tasks_v2';
+let tasks=[];
+let view='dash';
+let filterAssignee='';
+let filterPriority='';
+let editId=null;
+let parsedAI=[];
+
+const ASSIGNEES=['かなむ','社長','BM①','BM②'];
+
+function load(){try{const s=localStorage.getItem(STORAGE);if(s)tasks=JSON.parse(s);}catch(e){tasks=[];}}
+function save(){try{localStorage.setItem(STORAGE,JSON.stringify(tasks));}catch(e){}}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
+
+function setView(v){
+  view=v;
+  ['dash','kanban','list'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===v);
+    document.getElementById('nav-'+t).classList.toggle('active',t===v);
+  });
+  render();
+}
+
+function getFiltered(){
+  const q=(document.getElementById('search')||{}).value||'';
+  return tasks.filter(t=>{
+    if(q&&!t.title.toLowerCase().includes(q.toLowerCase()))return false;
+    if(filterAssignee&&t.assignee!==filterAssignee)return false;
+    if(filterPriority&&t.priority!==filterPriority)return false;
+    return true;
+  });
+}
+
+function isOverdue(due){return due&&new Date(due)<new Date();}
+function fmtDate(d){if(!d)return'';const dt=new Date(d);return(dt.getMonth()+1)+'/'+(dt.getDate());}
+
+function pBadge(p){const c=p==='高'?'badge-high':p==='中'?'badge-mid':'badge-low';return`<span class="badge ${c}">${p}</span>`;}
+function sBadge(s){const m={todo:['status-todo','未着手'],doing:['status-doing','進行中'],done:['status-done','完了']};const[cls,lbl]=m[s]||m.todo;return`<span class="status-pill ${cls}">${lbl}</span>`;}
+
+function taskCardHTML(t){
+  const od=isOverdue(t.due)&&t.status!=='done';
+  return`<div class="task-card" onclick="openTaskSheet('${t.id}')">
+    <div class="task-card-top">
+      <div class="task-card-title${t.status==='done'?' done':''}">${t.title}</div>
+      ${sBadge(t.status)}
+    </div>
+    <div class="task-card-meta">
+      ${pBadge(t.priority)}
+      ${t.assignee?`<span class="badge badge-assignee">${t.assignee}</span>`:''}
+      ${t.due?`<span class="badge badge-due${od?' overdue':''}">📅 ${fmtDate(t.due)}</span>`:''}
+    </div>
+    ${t.memo?`<div class="task-card-memo">${t.memo.slice(0,60)}${t.memo.length>60?'…':''}</div>`:''}
+  </div>`;
+}
+
+function renderStats(){
+  const tot=tasks.length,doing=tasks.filter(t=>t.status==='doing').length,done=tasks.filter(t=>t.status==='done').length;
+  const urg=tasks.filter(t=>t.priority==='高'&&t.status!=='done').length;
+  document.getElementById('stats-area').innerHTML=`
+    <div class="stat"><div class="stat-val">${tot}</div><div class="stat-label">全タスク</div></div>
+    <div class="stat"><div class="stat-val">${doing}</div><div class="stat-label">進行中</div></div>
+    <div class="stat"><div class="stat-val">${done}</div><div class="stat-label">完了</div></div>
+    <div class="stat"><div class="stat-val red">${urg}</div><div class="stat-label">要対応</div></div>`;
+}
+
+function renderFilterBar(){
+  const chips=[
+    {label:'全員',val:'',type:'a'},
+    ...ASSIGNEES.map(a=>({label:a,val:a,type:'a'})),
+    {label:'─',val:'',type:'sep'},
+    {label:'全優先度',val:'',type:'p'},
+    {label:'高優先',val:'高',type:'p'},
+    {label:'中優先',val:'中',type:'p'},
+  ];
+  document.getElementById('filter-bar').innerHTML=chips.map(c=>{
+    if(c.type==='sep')return'<span style="color:var(--border2);line-height:30px">│</span>';
+    const active=(c.type==='a'&&filterAssignee===c.val)||(c.type==='p'&&filterPriority===c.val);
+    return`<button class="filter-chip${active?' active':''}" onclick="setFilter('${c.type}','${c.val}')">${c.label}</button>`;
+  }).join('');
+}
+
+function setFilter(type,val){
+  if(type==='a')filterAssignee=val;
+  else filterPriority=val;
+  render();
+}
+
+function renderDash(filtered){
+  const doing=filtered.filter(t=>t.status==='doing');
+  const todo=filtered.filter(t=>t.status==='todo').sort((a,b)=>['高','中','低'].indexOf(a.priority)-['高','中','低'].indexOf(b.priority));
+  const done=filtered.filter(t=>t.status==='done');
+  let html='';
+  if(doing.length){html+=`<div class="section-header">🔵 進行中 (${doing.length})</div>`;html+=doing.map(taskCardHTML).join('');}
+  if(todo.length){html+=`<div class="section-header" style="margin-top:${doing.length?'16px':'4px'}">⚪ 未着手 (${todo.length})</div>`;html+=todo.map(taskCardHTML).join('');}
+  if(done.length){html+=`<div class="section-header" style="margin-top:${(doing.length||todo.length)?'16px':'4px'}">🟢 完了 (${done.length})</div>`;html+=done.map(taskCardHTML).join('');}
+  if(!filtered.length)html=`<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">タスクがありません<br>＋ボタンから追加できます</div></div>`;
+  return html;
+}
+
+function renderKanban(filtered){
+  const cols=[['todo','未着手'],['doing','進行中'],['done','完了']];
+  return`<div class="kanban-wrap">${cols.map(([s,l])=>{
+    const col=filtered.filter(t=>t.status===s);
+    return`<div class="kanban-col">
+      <div class="kanban-col-header"><span class="kanban-col-title">${l}</span><span class="kanban-count">${col.length}</span></div>
+      ${col.length?col.map(taskCardHTML).join(''):`<div class="empty-col">なし</div>`}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderList(filtered){
+  if(!filtered.length)return`<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">タスクがありません</div></div>`;
+  return filtered.map(taskCardHTML).join('');
+}
+
+function render(){
+  renderStats();
+  renderFilterBar();
+  const f=getFiltered();
+  let html='';
+  if(view==='dash')html=renderDash(f);
+  else if(view==='kanban')html=renderKanban(f);
+  else html=renderList(f);
+  document.getElementById('main-content').innerHTML=html;
+}
+
+function openTaskSheet(id){
+  editId=id||null;
+  const t=id?tasks.find(x=>x.id===id):null;
+  document.getElementById('sheet-container').innerHTML=`
+    <div class="sheet-overlay" onclick="if(event.target.classList.contains('sheet-overlay'))closeSheet()">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">${t?'タスクを編集':'新規タスク'}</div>
+        <div class="form-group">
+          <label class="form-label">タスク名</label>
+          <input class="form-input" id="f-title" placeholder="タスク名を入力" value="${t?t.title:''}" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ステータス</label>
+          <select class="form-input" id="f-status">
+            <option value="todo"${!t||t.status==='todo'?' selected':''}>未着手</option>
+            <option value="doing"${t&&t.status==='doing'?' selected':''}>進行中</option>
+            <option value="done"${t&&t.status==='done'?' selected':''}>完了</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">担当者</label>
+            <select class="form-input" id="f-assignee">
+              <option value="">未定</option>
+              ${ASSIGNEES.map(a=>`<option${t&&t.assignee===a?' selected':''}>${a}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">優先度</label>
+            <select class="form-input" id="f-priority">
+              ${['高','中','低'].map(p=>`<option${t?t.priority===p?' selected':'':p==='中'?' selected':''}>${p}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">期限</label>
+          <input class="form-input" type="date" id="f-due" value="${t&&t.due?t.due:''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">メモ</label>
+          <textarea class="form-input" id="f-memo" placeholder="補足・コメント">${t?t.memo||'':''}</textarea>
+        </div>
+        <div class="btn-row">
+          ${t?`<button class="btn btn-delete" onclick="deleteTask('${t.id}')">削除</button>`:''}
+          <button class="btn btn-cancel" onclick="closeSheet()">キャンセル</button>
+          <button class="btn btn-save" onclick="saveTask()">保存</button>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(()=>document.getElementById('f-title').focus(),100);
+}
+
+function closeSheet(){document.getElementById('sheet-container').innerHTML='';editId=null;}
+
+function saveTask(){
+  const title=(document.getElementById('f-title').value||'').trim();
+  if(!title){alert('タスク名を入力してください');return;}
+  const d={id:editId||uid(),title,status:document.getElementById('f-status').value,assignee:document.getElementById('f-assignee').value,priority:document.getElementById('f-priority').value,due:document.getElementById('f-due').value,memo:(document.getElementById('f-memo').value||'').trim(),createdAt:editId?(tasks.find(t=>t.id===editId)||{}).createdAt||Date.now():Date.now()};
+  if(editId){const i=tasks.findIndex(t=>t.id===editId);if(i>=0)tasks[i]=d;}
+  else tasks.unshift(d);
+  save();closeSheet();render();
+}
+
+function deleteTask(id){if(!confirm('このタスクを削除しますか？'))return;tasks=tasks.filter(t=>t.id!==id);save();closeSheet();render();}
+
+function openAiSheet(){
+  document.getElementById('sheet-container').innerHTML=`
+    <div class="sheet-overlay" onclick="if(event.target.classList.contains('sheet-overlay'))closeSheet()">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">✦ AIでタスクを一括追加</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">SlackやGoogleドキュメントのテキストをそのまま貼り付けてください。AIがタスクを自動で読み取ります。</div>
+        <div class="form-group">
+          <textarea class="form-input" id="ai-input" placeholder="例：&#10;かなむ：学生団体DM送付、今週中&#10;社長：企業2社クロージング、来週金曜（高優先）&#10;BM①：Instagram投稿 3本、今月末" style="min-height:120px"></textarea>
+        </div>
+        <button class="btn-ai" onclick="parseWithAI()">✦ AIで解析する</button>
+        <button class="btn btn-cancel" style="width:100%" onclick="closeSheet()">キャンセル</button>
+        <div id="ai-result-area"></div>
+      </div>
+    </div>`;
+}
+
+async function parseWithAI(){
+  const text=(document.getElementById('ai-input').value||'').trim();
+  if(!text){alert('テキストを入力してください');return;}
+  document.getElementById('ai-result-area').innerHTML=`<div class="loading-wrap">解析中<div class="loading-dots"><span></span><span></span><span></span></div></div>`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`以下のテキストからタスクを抽出し、JSONのみを返してください。前置き不要。\n\nテキスト:\n${text}\n\n形式:\n[{"title":"タスク名","assignee":"かなむ/社長/BM①/BM②/空文字","priority":"高/中/低","due":"YYYY-MM-DD/空文字","memo":"補足/空文字"}]`}]})});
+    const data=await res.json();
+    const raw=data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+    parsedAI=JSON.parse(raw).map(t=>({...t,id:uid(),status:'todo',createdAt:Date.now()}));
+    renderAIResults();
+  }catch(e){document.getElementById('ai-result-area').innerHTML=`<div style="color:var(--red);font-size:13px;text-align:center;padding:16px">解析に失敗しました。再試行してください。</div>`;}
+}
+
+function renderAIResults(){
+  if(!parsedAI.length){document.getElementById('ai-result-area').innerHTML=`<div style="color:var(--text2);font-size:13px;text-align:center;padding:16px">タスクが見つかりませんでした</div>`;return;}
+  document.getElementById('ai-result-area').innerHTML=`
+    <div style="margin-top:14px">
+      <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px">${parsedAI.length}件を検出 — 内容を確認・修正して登録</div>
+      <div class="ai-results">
+        ${parsedAI.map((t,i)=>`
+          <div class="ai-result-item">
+            <input class="ai-result-title-input" value="${t.title}" onchange="parsedAI[${i}].title=this.value" placeholder="タスク名">
+            <div class="ai-result-selects">
+              <select class="mini-select" onchange="parsedAI[${i}].assignee=this.value">
+                ${['','かなむ','社長','BM①','BM②'].map(a=>`<option${t.assignee===a?' selected':''}>${a||'担当未定'}</option>`).join('')}
+              </select>
+              <select class="mini-select" onchange="parsedAI[${i}].priority=this.value">
+                ${['高','中','低'].map(p=>`<option${t.priority===p?' selected':''}>${p}</option>`).join('')}
+              </select>
+              <input type="date" class="mini-select" value="${t.due||''}" onchange="parsedAI[${i}].due=this.value" style="width:130px">
+            </div>
+          </div>`).join('')}
+      </div>
+      <button class="btn btn-save" style="width:100%;margin-top:12px;padding:14px" onclick="addParsedTasks()">✓ ${parsedAI.length}件を登録する</button>
+    </div>`;
+}
+
+function addParsedTasks(){tasks=[...parsedAI,...tasks];save();closeSheet();render();}
+
+load();render();
+</script>
+</body>
+</html>
